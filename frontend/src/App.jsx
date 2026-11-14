@@ -5,50 +5,12 @@ import {
   Menu, Search, Share2, ShieldCheck, Sprout, UploadCloud, X
 } from 'lucide-react';
 
-const API = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');const crops = [
-  // Existing supported crops
-  'Apple',
-  'Bell Pepper',
-  'Blueberry',
-  'Cherry',
-  'Corn (Maize)',
-  'Grape',
-  'Orange',
-  'Peach',
-  'Potato',
-  'Raspberry',
-  'Soybean',
-  'Squash',
-  'Strawberry',
-  'Tomato',
+const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
-  // Additional crops
-  'Rice',
-  'Wheat',
-  'Cotton',
-  'Chilli',
-  'Mustard',
-  'Onion',
-  'Garlic',
-  'Ginger',
-  'Turmeric',
-  'Brinjal (Eggplant)',
-  'Okra (Lady Finger)',
-  'Cucumber',
-  'Pumpkin',
-  'Cabbage',
-  'Cauliflower',
-  'Banana',
-  'Mango',
-  'Papaya',
-  'Lemon',
-  'Guava',
-  'Coconut',
-  'Tea',
-  'Sugarcane',
-  'Groundnut',
-  'Pulses',
-  'Other'
+const crops = [
+  'Apple', 'Bell Pepper', 'Blueberry', 'Cherry', 'Corn (Maize)',
+  'Grape', 'Orange', 'Peach', 'Potato', 'Raspberry', 'Soybean',
+  'Squash', 'Strawberry', 'Tomato'
 ];function percent(value) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return 'Not provided';
   const n = Number(value);
@@ -67,32 +29,22 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
-  const [scans, setScans] = useState([]);
-  const [stats, setStats] = useState({total_scans: 0, by_crop: [], top_diseases: []});
   const [apiStatus, setApiStatus] = useState('checking');
-  const [query, setQuery] = useState('');
   const fileRef = useRef(null);
 
   useEffect(() => {
     checkHealth();
-    loadResearch();
   }, []);
 
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
   async function checkHealth() {
     try {
+      if (!API) { setApiStatus('offline'); return; }
       const r = await fetch(`${API}/api/health`);
       const d = await r.json();
 setApiStatus(d.status === 'ok' ? 'ready' : 'offline');
     } catch { setApiStatus('offline'); }
-  }
-  async function loadResearch() {
-    try {
-      const [s, st] = await Promise.all([fetch(`${API}/api/scans?limit=200`), fetch(`${API}/api/stats`)]);
-      if (s.ok) setScans(await s.json());
-      if (st.ok) setStats(await st.json());
-    } catch { /* API status is displayed in the header */ }
   }
   function chooseFile(f) {
     if (!f) return;
@@ -110,15 +62,13 @@ setApiStatus(d.status === 'ok' ? 'ready' : 'offline');
     const body = new FormData();
     body.append('image', file);
     body.append('crop', crop.toLowerCase());
-    body.append('sample_code', sampleCode);
-    body.append('observer', observer);
-    body.append('notes', notes);
+    if (!API) { setError('The online AI server is not configured yet.'); setBusy(false); return; }
     try {
       const response = await fetch(`${API}/api/diagnose`, { method: 'POST', body });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || 'Could not analyse this image.');
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || `AI server error (${response.status}). Please try again.`);
+      if (!data.disease || data.confidence === undefined) throw new Error('The AI server returned an incomplete diagnosis. Please try again.');
       setResult(data);
-      await loadResearch();
     } catch (err) {
       setError(err.message || 'Network error. Check your internet connection and API server.');
     } finally { setBusy(false); }
@@ -133,18 +83,13 @@ setApiStatus(d.status === 'ok' ? 'ready' : 'offline');
       catch { alert(text); }
     }
   }
-  const filtered = useMemo(() => scans.filter(s =>
-    [s.crop, s.disease, s.sample_code, s.observer].join(' ').toLowerCase().includes(query.toLowerCase())
-  ), [scans, query]);
-
   return <div className="app-shell">
     <aside className="sidebar">
       <div className="brand"><div className="brand-icon"><Sprout size={22}/></div><div><b>PlantCare AI</b><small>RESEARCH LAB</small></div></div>
       <div className="side-label">WORKSPACE</div>
       <button className={`nav-item ${page==='scan'?'active':''}`} onClick={()=>setPage('scan')}><Camera size={18}/> Disease scanner</button>
-      <button className={`nav-item ${page==='research'?'active':''}`} onClick={()=>{setPage('research');loadResearch();}}><FlaskConical size={18}/> Research data</button>
       <div className="sidebar-bottom">
-        <div className="privacy-note"><ShieldCheck size={17}/><span>Research records are stored on your configured backend server.</span></div>
+        <div className="privacy-note"><ShieldCheck size={17}/><span>Images are analysed temporarily and are not saved as records.</span></div>
         <div className="version">PLANTCARE AI · v1.0</div>
       </div>
     </aside>
@@ -161,7 +106,7 @@ setApiStatus(d.status === 'ok' ? 'ready' : 'offline');
           <div>
             <div className="eyebrow"><span className="eyebrow-dot"/> CROP HEALTH INTELLIGENCE</div>
             <h1>Understand what’s<br/><em>affecting your crops.</em></h1>
-            <p>Capture a leaf image to screen for possible plant diseases and build a structured research dataset.</p>
+            <p>Upload a leaf image to screen for possible plant diseases. Results are shown immediately and are not saved.</p>
           </div>
           <div className="hero-art"><div className="art-circle"><Leaf size={72} strokeWidth={1.1}/></div><span className="art-tag">IMAGE · ANALYSE · LEARN</span></div>
         </div>
@@ -200,14 +145,14 @@ setApiStatus(d.status === 'ok' ? 'ready' : 'offline');
         {error && <div className="error-banner"><AlertCircle size={18}/><span>{error}</span><button onClick={()=>setError('')}><X size={16}/></button></div>}
 
         {result && <div className="result-panel">
-          <div className="result-top"><div><div className="eyebrow">SCAN COMPLETE</div><h2>Analysis report</h2></div><span className="result-badge"><CheckCircle2 size={15}/> Saved to research data</span></div>
+          <div className="result-top"><div><div className="eyebrow">SCAN COMPLETE</div><h2>Analysis report</h2></div><span className="result-badge"><CheckCircle2 size={15}/> Analysis complete</span></div>
           <div className="result-body">
             <div className="result-image">{preview && <img src={preview} alt="Analysed leaf"/>}</div>
             <div className="result-info">
               <span className="result-label">POSSIBLE ISSUE IDENTIFIED</span>
               <h3>{titleCase(result.disease)}</h3>
-              <div className="result-meta"><span>{titleCase(result.crop)}</span><span>·</span><span>{new Date(result.created_at).toLocaleString()}</span></div>
-              <div className="confidence"><div><span>Provider confidence</span><b>{percent(result.confidence)}</b></div><div className="meter"><i style={{width: `${Math.min(100, Math.max(0, Number(result.confidence) * (Number(result.confidence)<=1?100:1) || 0))}%`}}/></div></div>
+              <div className="result-meta"><span>{titleCase(result.crop)}</span><span>·</span><span>{result.created_at ? new Date(result.created_at).toLocaleString() : 'Just analysed'}</span></div>
+              <div className="confidence"><div><span>Model confidence (estimate)</span><b>{percent(result.confidence)}</b></div><div className="meter"><i style={{width: `${Math.min(100, Math.max(0, Number(result.confidence) * (Number(result.confidence)<=1?100:1) || 0))}%`}}/></div></div>
               {result.treatment && <div className="guidance">
                 {result.treatment.cure && <p><b>Possible action:</b> {result.treatment.cure}</p>}
                 {result.treatment.prevention && <p><b>Prevention:</b> {result.treatment.prevention}</p>}
@@ -219,25 +164,8 @@ setApiStatus(d.status === 'ok' ? 'ready' : 'offline');
           </div>
         </div>}
 
-        <div className="bottom-stats">
-          <div><span className="stat-icon"><Activity size={18}/></span><div><b>{stats.total_scans}</b><small>Research scans saved</small></div></div>
-          <div><span className="stat-icon"><Sprout size={18}/></span><div><b>{stats.by_crop.length}</b><small>Crop types recorded</small></div></div>
-          <button onClick={()=>{setPage('research');loadResearch();}}>View research records <ArrowUpRight size={16}/></button>
-        </div>
-      </section> : <section className="content research-content">
-        <div className="research-heading"><div><div className="eyebrow">DATA COLLECTION</div><h1>Research <em>dataset.</em></h1><p>Review saved scan records and export your collected observations.</p></div><a className="primary-btn export-btn" href={`${API}/api/export.csv`}><Download size={17}/> Export CSV</a></div>
-        <div className="stats-grid">
-          <div className="stat-card"><span>Total scans</span><b>{stats.total_scans}</b><small>All saved records</small></div>
-          <div className="stat-card"><span>Crop types</span><b>{stats.by_crop.length}</b><small>Distinct crop categories</small></div>
-          <div className="stat-card"><span>Latest record</span><b>{scans[0]?new Date(scans[0].created_at).toLocaleDateString():'—'}</b><small>Most recent scan</small></div>
-        </div>
-        <div className="table-panel">
-          <div className="table-head"><div><History size={18}/><b>Scan history</b><span>{filtered.length} records</span></div><div className="searchbox"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search crop, disease, sample…"/></div></div>
-          {filtered.length ? <div className="table-scroll"><table><thead><tr><th>DATE</th><th>CROP</th><th>PREDICTED ISSUE</th><th>CONFIDENCE</th><th>SAMPLE CODE</th></tr></thead><tbody>{filtered.map(s=><tr key={s.id}><td>{new Date(s.created_at).toLocaleDateString()}</td><td><span className="crop-chip">{titleCase(s.crop)}</span></td><td>{titleCase(s.disease)}</td><td>{percent(s.confidence)}</td><td>{s.sample_code || '—'}</td></tr>)}</tbody></table></div> :
-            <div className="empty-state"><FlaskConical size={28}/><b>No research records yet</b><span>Complete a plant scan to start collecting your dataset.</span><button className="secondary-btn" onClick={()=>setPage('scan')}>Start first scan</button></div>}
-        </div>
-        <div className="research-footnote"><ShieldCheck size={16}/> Exported CSV contains metadata. Original images are stored separately in the backend uploads folder.</div>
-      </section>}
+        <div className="bottom-stats"><div><span className="stat-icon"><ShieldCheck size={18}/></span><div><b>No scan limit</b><small>Results are not stored</small></div></div></div>
+      </section> : <section className="content"><div className="panel"><h2>PlantCare AI</h2><p>Upload a leaf image on the Disease scanner page to receive an instant result. No scan history or files are saved.</p><button className="primary-btn" onClick={()=>setPage('scan')}>Open disease scanner</button></div></section>}
       <footer>PLANTCARE AI <span>·</span> RESEARCH PROTOTYPE <span>·</span> Always verify AI findings with an agricultural expert.</footer>
     </main>
   </div>;
