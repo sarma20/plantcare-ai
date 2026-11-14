@@ -23,9 +23,6 @@ export default function App() {
   const [crop, setCrop] = useState('Tomato');
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState('');
-  const [sampleCode, setSampleCode] = useState('');
-  const [observer, setObserver] = useState('');
-  const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
@@ -131,12 +128,7 @@ setApiStatus(d.status === 'ok' ? 'ready' : 'offline');
             <div className="panel-title"><div><Sprout size={18}/><b>Sample details</b></div><span>RESEARCH METADATA</span></div>
             <label>Crop type <sup>*</sup></label>
             <div className="select-wrap"><select value={crop} onChange={e=>setCrop(e.target.value)}>{crops.map(c=><option key={c}>{c}</option>)}</select><ChevronDown size={16}/></div>
-            <label>Sample / field code <span className="optional">OPTIONAL</span></label>
-            <input value={sampleCode} onChange={e=>setSampleCode(e.target.value)} placeholder="e.g. RICE-MGD-001"/>
-            <label>Observer name <span className="optional">OPTIONAL</span></label>
-            <input value={observer} onChange={e=>setObserver(e.target.value)} placeholder="Name of researcher"/>
-            <label>Field notes <span className="optional">OPTIONAL</span></label>
-            <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Location area, plant stage, symptoms noticed…" rows="3"/>
+
             <button className="primary-btn" type="submit" disabled={busy || !file}>{busy?<><Loader2 className="spin" size={17}/> Analysing image…</>:<>Analyse plant image <ArrowUpRight size={17}/></>}</button>
             <p className="secure-line"><ShieldCheck size={14}/> Image sent securely to your backend over your configured connection.</p>
           </div>
@@ -158,6 +150,8 @@ setApiStatus(d.status === 'ok' ? 'ready' : 'offline');
                 {result.treatment.prevention && <p><b>Prevention:</b> {result.treatment.prevention}</p>}
                 {Array.isArray(result.treatment.recommended_sprays) && result.treatment.recommended_sprays.length>0 && <p><b>Provider-listed products:</b> {result.treatment.recommended_sprays.join(', ')}</p>}
               </div>}
+              {result.severity && <p><b>Severity:</b> {titleCase(result.severity)}</p>}
+              {result.pathogen && <p><b>Possible pathogen:</b> {result.pathogen}</p>}
               <div className="caution"><AlertCircle size={16}/><span>AI screening is not a confirmed diagnosis. Consult an agricultural expert before taking treatment action.</span></div>
               <button className="secondary-btn share-btn" onClick={shareResult}><Share2 size={16}/> Share report</button>
             </div>
