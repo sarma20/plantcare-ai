@@ -125,7 +125,7 @@ setApiStatus(d.status === 'ok' ? 'ready' : 'offline');
           </div>
 
           <div className="panel details-panel">
-            <div className="panel-title"><div><Sprout size={18}/><b>Sample details</b></div><span>RESEARCH METADATA</span></div>
+            <div className="panel-title"><div><Sprout size={18}/><b>Diagnosis settings</b></div><span>SUPPORTED MODEL CROPS</span></div>
             <label>Crop type <sup>*</sup></label>
             <div className="select-wrap"><select value={crop} onChange={e=>setCrop(e.target.value)}>{crops.map(c=><option key={c}>{c}</option>)}</select><ChevronDown size={16}/></div>
 
@@ -141,7 +141,7 @@ setApiStatus(d.status === 'ok' ? 'ready' : 'offline');
           <div className="result-body">
             <div className="result-image">{preview && <img src={preview} alt="Analysed leaf"/>}</div>
             <div className="result-info">
-              <span className="result-label">POSSIBLE ISSUE IDENTIFIED</span>
+              <span className="result-label">{result.result_status === "healthy" ? "HEALTHY LEAF PREDICTED" : "POSSIBLE ISSUE IDENTIFIED"}</span>
               <h3>{titleCase(result.disease)}</h3>
               <div className="result-meta"><span>{titleCase(result.crop)}</span><span>·</span><span>{result.created_at ? new Date(result.created_at).toLocaleString() : 'Just analysed'}</span></div>
               <div className="confidence"><div><span>Model confidence (estimate)</span><b>{percent(result.confidence)}</b></div><div className="meter"><i style={{width: `${Math.min(100, Math.max(0, Number(result.confidence) * (Number(result.confidence)<=1?100:1) || 0))}%`}}/></div></div>
