@@ -15,3 +15,14 @@ uploads/
 backend/app/main_backup.py
 backend/*.zip
 frontend/~$*
+
+# Local datasets and generated files
+backend/data/
+backup_before_upgrade/
+README.zip
+
+# Local backup copies
+backend/app/*_before_upgrade.py
+frontend/src/*_before_report_upgrade.jsx
+frontend/src/App_old.jsx
+backend/app/main_before_prediction_upgrade.py
